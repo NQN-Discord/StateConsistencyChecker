@@ -9,7 +9,7 @@ from logging import basicConfig, INFO, getLogger
 import json
 
 
-basicConfig(stream=stderr, level=INFO)
+basicConfig(stream=stderr, level=INFO, format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 log = getLogger(__name__)
 
 global_attrs = ("id", "owner_id", "icon", "name", "_system_channel_id")
