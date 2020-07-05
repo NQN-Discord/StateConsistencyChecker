@@ -98,24 +98,26 @@ class ConsistencyChecker:
         guild["members"][0]["joined_at"] = guild["joined_at"]
         return self.client._connection._add_guild_from_data(guild)
 
-    async def check_guild(self, guild_id: int, guild_discord: Optional[Guild] = None) -> Dict[str, Tuple[str, str]]:
-        if guild_discord is None:
-            try:
-                guild_discord = await self.client.fetch_guild(guild_id)
-            except Forbidden:
-                return {}
-        guild_redis = await self.fetch_guild_redis(guild_id)
-        global_equalities = self.get_equalities(guild_discord, guild_redis, global_attrs)
+    async def check_guild(self, guild_id: int, existing_guild: Optional[Guild] = None) -> Dict[str, Tuple[str, str]]:
+        try:
+            guild_discord = await self.client.fetch_guild(guild_id)
+        except Forbidden:
+            return {}
+        if existing_guild is None:
+            guild_other = await self.fetch_guild_redis(guild_id)
+        else:
+            guild_other = existing_guild
+        global_equalities = self.get_equalities(guild_discord, guild_other, global_attrs)
 
         for array_type, attrs in array_attrs.items():
             discord_objects = sorted(getattr(guild_discord, array_type), key=lambda x: x.id)
-            redis_objects = sorted(getattr(guild_redis, array_type), key=lambda x: x.id)
+            other_objects = sorted(getattr(guild_other, array_type), key=lambda x: x.id)
 
-            for i, j in zip(discord_objects, redis_objects):
+            for i, j in zip(discord_objects, other_objects):
                 for attr, value in self.get_equalities(i, j, attrs).items():
                     global_equalities[f"{array_type}.{i.id}.{attr}"] = value
 
-        return {k: (repr(deepgetattr(guild_discord, k)), repr(deepgetattr(guild_redis, k))) for k, v in global_equalities.items() if not v}
+        return {k: (repr(deepgetattr(guild_discord, k)), repr(deepgetattr(guild_other, k))) for k, v in global_equalities.items() if not v}
 
     def get_equalities(self, a, b, attrs: Tuple) -> Dict[str, bool]:
         return {attr: getattr(a, attr) == getattr(b, attr) for attr in attrs}
