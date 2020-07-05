@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-   name="state_consistency_checker",
+   name="StateConsistencyChecker",
    version="0.1.0",
    description="State consistency checker and verifier",
    author='Blue',
