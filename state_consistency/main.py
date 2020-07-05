@@ -1,4 +1,4 @@
-from typing import Set, Tuple, Dict
+from typing import Set, Tuple, Dict, Optional
 import yaml
 import asyncio
 import aioredis
@@ -12,7 +12,7 @@ import json
 basicConfig(stream=stderr, level=INFO, format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 log = getLogger(__name__)
 
-global_attrs = ("id", "owner_id", "icon", "name", "_system_channel_id")
+global_attrs = ("id", "owner_id", "icon", "name", "_system_channel_id", "premium_tier")
 array_attrs = {
     "roles": ("id", "position", "_permissions", "name", "mentionable", "managed", "hoist", "_colour"),
     "channels": ("id", "type", "topic", "rate_limit_per_user", "position", "parent_id", "nsfw", "name", "permissions_overwrites"),
@@ -93,15 +93,17 @@ class ConsistencyChecker:
         }
         guild["member_count"] = int(guild["member_count"])
         guild["system_channel_id"] = guild["system_channel_id"] or None
+        guild["premium_tier"] = int(guild.get("premium_tier", "0") or "0")
         guild["icon"] = guild["icon"] or None
         guild["members"][0]["joined_at"] = guild["joined_at"]
         return self.client._connection._add_guild_from_data(guild)
 
-    async def check_guild(self, guild_id: int) -> Dict[str, Tuple[str, str]]:
-        try:
-            guild_discord = await self.client.fetch_guild(guild_id)
-        except Forbidden:
-            return {}
+    async def check_guild(self, guild_id: int, guild_discord: Optional[Guild] = None) -> Dict[str, Tuple[str, str]]:
+        if guild_discord is None:
+            try:
+                guild_discord = await self.client.fetch_guild(guild_id)
+            except Forbidden:
+                return {}
         guild_redis = await self.fetch_guild_redis(guild_id)
         global_equalities = self.get_equalities(guild_discord, guild_redis, global_attrs)
 
@@ -122,9 +124,6 @@ class ConsistencyChecker:
 async def main(config, args):
     checker = ConsistencyChecker(config["redis_uri"], config["token"])
     await checker.connect()
-
-    await checker.check_guild(643095690557390868)
-    return
 
     guild_count = args.absolute
     total_guilds = 0
