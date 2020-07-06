@@ -101,7 +101,6 @@ class ConsistencyChecker:
     async def check_guild(self, guild_id: int, existing_guild: Optional[Guild] = None) -> Dict[str, Tuple[str, str]]:
         try:
             guild_discord = await self.client.fetch_guild(guild_id)
-            print(self.get_guild_attrs(guild_discord))
         except Forbidden:
             return {}
         if existing_guild is None:
