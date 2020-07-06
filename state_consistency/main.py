@@ -1,4 +1,4 @@
-from typing import Set, Tuple, Dict, Optional
+from typing import Set, Tuple, Dict, Optional, List
 import yaml
 import asyncio
 import aioredis
@@ -27,7 +27,7 @@ def parse_id_dict(d):
 def deepgetattr(v, k: str):
     key, *rest = k.split(".", 1)
 
-    if isinstance(v, list):
+    if isinstance(v, (list, tuple)):
         new_v = next((i for i in v if str(i.id) == key), None)
         if new_v is None:
             return float("nan")
@@ -101,6 +101,7 @@ class ConsistencyChecker:
     async def check_guild(self, guild_id: int, existing_guild: Optional[Guild] = None) -> Dict[str, Tuple[str, str]]:
         try:
             guild_discord = await self.client.fetch_guild(guild_id)
+            print(self.get_guild_attrs(guild_discord))
         except Forbidden:
             return {}
         if existing_guild is None:
@@ -118,6 +119,13 @@ class ConsistencyChecker:
                     global_equalities[f"{array_type}.{i.id}.{attr}"] = value
 
         return {k: (repr(deepgetattr(guild_discord, k)), repr(deepgetattr(guild_other, k))) for k, v in global_equalities.items() if not v}
+
+    def get_guild_attrs(self, guild: Guild) -> Dict[str, str]:
+        guild_attrs: List[str] = list(global_attrs)
+        for array_type, attrs in array_attrs.items():
+            discord_objects = sorted(getattr(guild, array_type), key=lambda x: x.id)
+            guild_attrs.extend(f"{array_type}.{i.id}.{attr}" for attr in attrs for i in discord_objects)
+        return {k: (repr(deepgetattr(guild, k))) for k in guild_attrs}
 
     def get_equalities(self, a, b, attrs: Tuple) -> Dict[str, bool]:
         return {attr: getattr(a, attr) == getattr(b, attr) for attr in attrs}
