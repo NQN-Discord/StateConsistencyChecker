@@ -1,5 +1,4 @@
 from typing import Set, Tuple, Dict, Optional, List
-import yaml
 import asyncio
 import aioredis
 import argparse
